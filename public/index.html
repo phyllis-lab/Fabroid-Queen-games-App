@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rock Paper Scissors Fitness</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <div class="eyebrow">ROCK PAPER SCISSORS FITNESS</div>
+      <h1>Play. Lock. Reveal. 🔥</h1>
+      <p class="sub">Create a room, send the code to your partner, and play live from two phones.</p>
+
+      <div id="home" class="panel">
+        <label>Your name<input id="nameInput" maxlength="24" placeholder="Coach P" /></label>
+        <button id="createBtn" class="primary">Create a room</button>
+        <div class="divider"><span>or</span></div>
+        <label>Room code<input id="codeInput" maxlength="6" placeholder="ABC123" /></label>
+        <button id="joinBtn">Join room</button>
+        <p id="homeMsg" class="msg"></p>
+      </div>
+
+      <div id="game" class="panel hidden">
+        <div class="roomline">Room <strong id="roomCode"></strong></div>
+        <div id="players" class="players"></div>
+        <div id="status" class="status">Waiting for your partner…</div>
+
+        <div id="choices" class="choices hidden">
+          <button class="choice" data-choice="rock"><span>🪨</span>Rock</button>
+          <button class="choice" data-choice="paper"><span>📄</span>Paper</button>
+          <button class="choice" data-choice="scissors"><span>✂️</span>Scissors</button>
+        </div>
+        <button id="lockBtn" class="primary hidden" disabled>Lock it in 🔒</button>
+        <div id="countdown" class="countdown hidden"></div>
+        <div id="result" class="result hidden"></div>
+        <button id="againBtn" class="hidden">Play again</button>
+      </div>
+    </section>
+  </main>
+<script src="/app.js"></script>
+</body>
+</html>
