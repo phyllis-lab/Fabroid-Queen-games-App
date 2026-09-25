@@ -3,7 +3,7 @@ const nameInput = $('#nameInput'), codeInput=$('#codeInput'), home=$('#home'), g
 const createBtn=$('#createBtn'), joinBtn=$('#joinBtn'), roomCodeEl=$('#roomCode'), playersEl=$('#players'), statusEl=$('#status');
 const choicesEl=$('#choices'), lockBtn=$('#lockBtn'), countdownEl=$('#countdown'), resultEl=$('#result'), againBtn=$('#againBtn');
 
-let ws, playerId = crypto.randomUUID(), myName='', roomCode='', selected=null, state=null, countdownTimer=null;
+let ws, playerId = crypto.randomUUID(), myName='', roomCode='', selected=null, state=null, countdownTimer=null, renderedRound=null;
 
 createBtn.addEventListener('click', async()=>{
   myName=nameInput.value.trim(); if(!myName) return msg('Enter your name first.');
@@ -32,17 +32,31 @@ function connect(){
 }
 
 document.querySelectorAll('.choice').forEach(btn=>btn.addEventListener('click',()=>{
-  if(!state || state.status==='countdown' || state.status==='revealed') return;
+  const me=state?.players?.find(p=>p.id===playerId);
+  if(!state || state.status!=='choosing' || me?.locked) return;
   selected=btn.dataset.choice;
-  document.querySelectorAll('.choice').forEach(x=>x.classList.toggle('selected',x===btn));
+  syncChoiceUI();
   lockBtn.disabled=false;
-  ws.send(JSON.stringify({type:'choose',playerId,choice:selected}));
+  lockBtn.textContent='Lock it in 🔒';
 }));
+
 lockBtn.addEventListener('click',()=>{
-  if(!selected) return;
-  ws.send(JSON.stringify({type:'lock',playerId}));
+  const me=state?.players?.find(p=>p.id===playerId);
+  if(!selected || !ws || ws.readyState!==WebSocket.OPEN || me?.locked) return;
   lockBtn.disabled=true;
+  lockBtn.textContent='Locking…';
+  // WebSocket messages are processed in order: save the choice first, then lock it.
+  ws.send(JSON.stringify({type:'choose',playerId,choice:selected}));
+  ws.send(JSON.stringify({type:'lock',playerId}));
 });
+
+function syncChoiceUI(){
+  document.querySelectorAll('.choice').forEach(btn=>{
+    const isSelected=btn.dataset.choice===selected;
+    btn.classList.toggle('selected',isSelected);
+    btn.setAttribute('aria-pressed',isSelected?'true':'false');
+  });
+}
 againBtn.addEventListener('click',()=>ws.send(JSON.stringify({type:'reset',playerId})));
 
 function render(){
@@ -54,8 +68,25 @@ function render(){
   });
   if(state.players.length<2){ statusEl.textContent='Waiting for your partner…'; choicesEl.classList.add('hidden'); lockBtn.classList.add('hidden'); return; }
   if(state.status==='choosing'){
-    clearCountdown(); selected=null; document.querySelectorAll('.choice').forEach(x=>x.classList.remove('selected'));
-    statusEl.textContent=`Round ${state.round}: choose secretly 👀`; choicesEl.classList.remove('hidden'); lockBtn.classList.remove('hidden'); lockBtn.disabled=true; resultEl.classList.add('hidden'); againBtn.classList.add('hidden'); countdownEl.classList.add('hidden');
+    clearCountdown();
+    if(renderedRound!==state.round){
+      selected=null;
+      renderedRound=state.round;
+    }
+    const me=state.players.find(p=>p.id===playerId);
+    const amLocked=!!me?.locked;
+    syncChoiceUI();
+    document.querySelectorAll('.choice').forEach(btn=>btn.disabled=amLocked);
+    statusEl.textContent=amLocked
+      ? `Round ${state.round}: locked in 🔒 Waiting for your partner…`
+      : `Round ${state.round}: choose secretly 👀`;
+    choicesEl.classList.remove('hidden');
+    lockBtn.classList.remove('hidden');
+    lockBtn.disabled=amLocked || !selected;
+    lockBtn.textContent=amLocked ? 'Locked in 🔒' : 'Lock it in 🔒';
+    resultEl.classList.add('hidden');
+    againBtn.classList.add('hidden');
+    countdownEl.classList.add('hidden');
   } else if(state.status==='countdown'){
     choicesEl.classList.add('hidden'); lockBtn.classList.add('hidden'); resultEl.classList.add('hidden'); againBtn.classList.add('hidden'); startCountdown();
   } else if(state.status==='revealed'){
